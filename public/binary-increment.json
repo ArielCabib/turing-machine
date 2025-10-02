@@ -1,0 +1,62 @@
+{
+  "Q": [
+    "q0",
+    "q1",
+    "qAccept",
+    "qReject"
+  ],
+  "Sigma": [
+    "0",
+    "1"
+  ],
+  "Gamma": [
+    "0",
+    "1",
+    "□"
+  ],
+  "delta": {
+    "q0": {
+      "0": {
+        "nextState": "q0",
+        "write": "0",
+        "move": "R"
+      },
+      "1": {
+        "nextState": "q0",
+        "write": "1",
+        "move": "R"
+      },
+      "□": {
+        "nextState": "q1",
+        "write": "□",
+        "move": "L"
+      }
+    },
+    "q1": {
+      "0": {
+        "nextState": "qAccept",
+        "write": "1",
+        "move": "S"
+      },
+      "1": {
+        "nextState": "q1",
+        "write": "0",
+        "move": "L"
+      },
+      "□": {
+        "nextState": "qAccept",
+        "write": "1",
+        "move": "S"
+      }
+    }
+  },
+  "q0": "q0",
+  "qAccept": "qAccept",
+  "qReject": "qReject",
+  "blank": "□",
+  "metadata": {
+    "name": "Binary Increment +1",
+    "description": "Increments a binary number by 1 (e.g., '101' → '110')",
+    "exportedAt": "2025-01-02T00:00:00.000Z"
+  }
+}

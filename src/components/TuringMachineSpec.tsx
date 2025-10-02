@@ -457,94 +457,64 @@ export default function TuringMachineSpecComponent({
     }
   };
 
-  const loadExample = (exampleName: string) => {
+  const loadExample = async (exampleName: string) => {
     console.log("Loading example:", exampleName);
-    switch (exampleName) {
-      case "binary-increment":
-        setFormData({
-          states: ["q0", "q1", "qAccept", "qReject"],
-          inputAlphabet: ["0", "1"],
-          tapeAlphabet: ["0", "1", "□"],
-          blankSymbol: "□",
-          startState: "q0",
-          acceptState: "qAccept",
-          rejectState: "qReject",
-          transitions: [
-            // Move to the rightmost digit
-            {
-              fromState: "q0",
-              readSymbol: "0",
-              toState: "q0",
-              writeSymbol: "0",
-              direction: "R",
-            },
-            {
-              fromState: "q0",
-              readSymbol: "1",
-              toState: "q0",
-              writeSymbol: "1",
-              direction: "R",
-            },
-            {
-              fromState: "q0",
-              readSymbol: "□",
-              toState: "q1",
-              writeSymbol: "□",
-              direction: "L",
-            },
+    try {
+      const response = await fetch(`/${exampleName}.json`);
+      if (!response.ok) {
+        throw new Error(`Failed to load example: ${response.statusText}`);
+      }
 
-            // Increment: 0 becomes 1, 1 becomes 0 and carry
-            {
-              fromState: "q1",
-              readSymbol: "0",
-              toState: "qAccept",
-              writeSymbol: "1",
-              direction: "S",
-            },
-            {
-              fromState: "q1",
-              readSymbol: "1",
-              toState: "q1",
-              writeSymbol: "0",
-              direction: "L",
-            },
-            {
-              fromState: "q1",
-              readSymbol: "□",
-              toState: "qAccept",
-              writeSymbol: "1",
-              direction: "S",
-            },
-          ],
+      const loadedSpec = await response.json();
+
+      // Validate that it's a valid Turing machine spec
+      if (
+        !loadedSpec.Q ||
+        !loadedSpec.Sigma ||
+        !loadedSpec.Gamma ||
+        !loadedSpec.delta
+      ) {
+        showToast("Invalid Turing machine specification file.", "error");
+        return;
+      }
+
+      // Update form data with loaded specification
+      setFormData({
+        states: Array.isArray(loadedSpec.Q) ? loadedSpec.Q : [],
+        inputAlphabet: Array.isArray(loadedSpec.Sigma) ? loadedSpec.Sigma : [],
+        tapeAlphabet: Array.isArray(loadedSpec.Gamma) ? loadedSpec.Gamma : [],
+        blankSymbol: loadedSpec.blank || "□",
+        startState: loadedSpec.q0 || "",
+        acceptState: loadedSpec.qAccept || "",
+        rejectState: loadedSpec.qReject || "",
+        transitions: Object.entries(loadedSpec.delta || {}).flatMap(
+          ([fromState, stateTransitions]) =>
+            Object.entries(stateTransitions || {}).map(
+              ([readSymbol, transition]) => ({
+                fromState,
+                readSymbol,
+                toState: transition?.nextState || "",
+                writeSymbol: transition?.write || "",
+                direction: transition?.move || "R",
+              })
+            )
+        ),
+      });
+
+      // Update metadata if available
+      if (loadedSpec.metadata) {
+        setExportMetadata({
+          name: loadedSpec.metadata.name || "Turing Machine Specification",
+          description:
+            loadedSpec.metadata.description ||
+            "Exported from Turing Machine Builder",
         });
-        break;
-      case "infinite-loop":
-        setFormData({
-          states: ["q0", "qAccept", "qReject"],
-          inputAlphabet: ["0"],
-          tapeAlphabet: ["0", "□"],
-          blankSymbol: "□",
-          startState: "q0",
-          acceptState: "qAccept",
-          rejectState: "qReject",
-          transitions: [
-            {
-              fromState: "q0",
-              readSymbol: "0",
-              toState: "q0",
-              writeSymbol: "0",
-              direction: "R",
-            },
-            {
-              fromState: "q0",
-              readSymbol: "□",
-              toState: "q0",
-              writeSymbol: "□",
-              direction: "L",
-            },
-          ],
-        });
-        break;
+      }
+
+      showToast("Example loaded successfully!");
+    } catch (error) {
+      console.error("Error loading example:", error);
+      showToast("Error loading example. Please try again.", "error");
     }
   };
 

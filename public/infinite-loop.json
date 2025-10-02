@@ -1,0 +1,37 @@
+{
+  "Q": [
+    "q0",
+    "qAccept",
+    "qReject"
+  ],
+  "Sigma": [
+    "0"
+  ],
+  "Gamma": [
+    "0",
+    "□"
+  ],
+  "delta": {
+    "q0": {
+      "0": {
+        "nextState": "q0",
+        "write": "0",
+        "move": "R"
+      },
+      "□": {
+        "nextState": "q0",
+        "write": "□",
+        "move": "L"
+      }
+    }
+  },
+  "q0": "q0",
+  "qAccept": "qAccept",
+  "qReject": "qReject",
+  "blank": "□",
+  "metadata": {
+    "name": "Infinite Loop",
+    "description": "A Turing machine that runs infinitely (use Stop button!)",
+    "exportedAt": "2025-01-02T00:00:00.000Z"
+  }
+}
