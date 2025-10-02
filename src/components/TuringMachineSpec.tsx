@@ -44,6 +44,20 @@ export default function TuringMachineSpecComponent({
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
 
+  // Drag and drop state
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  // Toast notification state
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error";
+  }>({
+    show: false,
+    message: "",
+    type: "success",
+  });
+
   // File input ref for loading JSON files
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -94,6 +108,28 @@ export default function TuringMachineSpecComponent({
       return () => document.removeEventListener("keydown", handleEscKey);
     }
   }, [showLoadModal, showSaveModal]);
+
+  // Auto-hide toast after 3 seconds
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast((prev) => ({ ...prev, show: false }));
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
+
+  // Toast notification functions
+  const showToast = (
+    message: string,
+    type: "success" | "error" = "success"
+  ) => {
+    setToast({ show: true, message, type });
+  };
+
+  const hideToast = () => {
+    setToast((prev) => ({ ...prev, show: false }));
+  };
 
   const addTransition = () => {
     setFormData((prev) => ({
@@ -261,7 +297,7 @@ export default function TuringMachineSpecComponent({
           !loadedSpec.Gamma ||
           !loadedSpec.delta
         ) {
-          alert("Invalid Turing machine specification file.");
+          showToast("Invalid Turing machine specification file.", "error");
           return;
         }
 
@@ -308,11 +344,12 @@ export default function TuringMachineSpecComponent({
           fileInputRef.current.value = "";
         }
 
-        alert("Turing machine specification loaded successfully!");
+        showToast("Turing machine specification loaded successfully!");
       } catch (error) {
         console.error("Error loading JSON file:", error);
-        alert(
-          "Error loading JSON file. Please make sure it's a valid Turing machine specification."
+        showToast(
+          "Error loading JSON file. Please make sure it's a valid Turing machine specification.",
+          "error"
         );
       }
     };
@@ -322,6 +359,101 @@ export default function TuringMachineSpecComponent({
 
   const triggerFileLoad = () => {
     fileInputRef.current?.click();
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      if (file.type === "application/json" || file.name.endsWith(".json")) {
+        // Process the dropped file directly
+        const reader = new FileReader();
+        reader.onload = (readerEvent) => {
+          try {
+            const jsonContent = readerEvent.target?.result as string;
+            const loadedSpec = JSON.parse(jsonContent);
+
+            // Validate that it's a valid Turing machine spec
+            if (
+              !loadedSpec.Q ||
+              !loadedSpec.Sigma ||
+              !loadedSpec.Gamma ||
+              !loadedSpec.delta
+            ) {
+              showToast("Invalid Turing machine specification file.", "error");
+              return;
+            }
+
+            // Update form data with loaded specification
+            setFormData({
+              states: Array.isArray(loadedSpec.Q) ? loadedSpec.Q : [],
+              inputAlphabet: Array.isArray(loadedSpec.Sigma)
+                ? loadedSpec.Sigma
+                : [],
+              tapeAlphabet: Array.isArray(loadedSpec.Gamma)
+                ? loadedSpec.Gamma
+                : [],
+              blankSymbol: loadedSpec.blank || "□",
+              startState: loadedSpec.q0 || "",
+              acceptState: loadedSpec.qAccept || "",
+              rejectState: loadedSpec.qReject || "",
+              transitions: Object.entries(loadedSpec.delta || {}).flatMap(
+                ([fromState, stateTransitions]) =>
+                  Object.entries(stateTransitions || {}).map(
+                    ([readSymbol, transition]) => ({
+                      fromState,
+                      readSymbol,
+                      toState: transition?.nextState || "",
+                      writeSymbol: transition?.write || "",
+                      direction: transition?.move || "R",
+                    })
+                  )
+              ),
+            });
+
+            // Update metadata if available
+            if (loadedSpec.metadata) {
+              setExportMetadata({
+                name:
+                  loadedSpec.metadata.name || "Turing Machine Specification",
+                description:
+                  loadedSpec.metadata.description ||
+                  "Exported from Turing Machine Builder",
+              });
+            }
+
+            // Close the load modal
+            setShowLoadModal(false);
+
+            showToast("Turing machine specification loaded successfully!");
+          } catch (error) {
+            console.error("Error loading JSON file:", error);
+            showToast(
+              "Error loading JSON file. Please make sure it's a valid Turing machine specification.",
+              "error"
+            );
+          }
+        };
+
+        reader.readAsText(file);
+      } else {
+        showToast("Please drop a JSON file.", "error");
+      }
+    }
   };
 
   const loadExample = (exampleName: string) => {
@@ -854,11 +986,21 @@ export default function TuringMachineSpecComponent({
                   </button>
                 </div>
 
-                <div className="text-center py-8">
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                    isDragOver
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                      : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
                   <div className="text-6xl mb-4">📁</div>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    Select a JSON file to load a previously saved Turing machine
-                    specification.
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    {isDragOver
+                      ? "Drop your JSON file here..."
+                      : "Drag and drop a JSON file here, or click to browse"}
                   </p>
                   <button
                     onClick={triggerFileLoad}
@@ -1001,6 +1143,32 @@ export default function TuringMachineSpecComponent({
             💾 Save Machine
           </button>
         </div>
+
+        {/* Toast Notification */}
+        {toast.show && (
+          <div className="fixed top-4 right-4 z-50">
+            <div
+              className={`px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 min-w-80 max-w-md ${
+                toast.type === "success"
+                  ? "bg-green-500 text-white"
+                  : "bg-red-500 text-white"
+              }`}
+            >
+              <div className="text-xl">
+                {toast.type === "success" ? "✅" : "❌"}
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">{toast.message}</p>
+              </div>
+              <button
+                onClick={hideToast}
+                className="text-white hover:text-gray-200 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
