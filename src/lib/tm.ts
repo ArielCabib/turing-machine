@@ -9,7 +9,7 @@ export interface Transition {
   move: Direction;
 }
 
-export type Delta = Record<State, Record<Symbol, Transition>>;
+export type Delta = Record<State, Partial<Record<Symbol, Transition>>>;
 
 export interface TuringMachineSpec {
   Q: Set<State>;          // states
@@ -77,7 +77,7 @@ export function step(rt: TMRuntime): boolean {
   const tr = stateRow[sym];
 
   if (!tr) {
-    // No rule: reject by default
+    // Missing transition: implicit reject
     rt.state = rt.spec.qReject;
     rt.steps++;
     return false;
