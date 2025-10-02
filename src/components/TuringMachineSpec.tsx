@@ -35,6 +35,15 @@ export default function TuringMachineSpecComponent({
     }>,
   });
 
+  // Metadata for JSON export
+  const [exportMetadata, setExportMetadata] = useState({
+    name: "Turing Machine Specification",
+    description: "Exported from Turing Machine Builder",
+  });
+
+  // Control visibility of metadata fields
+  const [showMetadataFields, setShowMetadataFields] = useState(false);
+
   // Load saved machine on component mount
   useEffect(() => {
     const savedSpec = getTuringMachineSpec();
@@ -63,6 +72,20 @@ export default function TuringMachineSpecComponent({
       });
     }
   }, []);
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && showMetadataFields) {
+        cancelDownload();
+      }
+    };
+
+    if (showMetadataFields) {
+      document.addEventListener("keydown", handleEscKey);
+      return () => document.removeEventListener("keydown", handleEscKey);
+    }
+  }, [showMetadataFields]);
 
   const addTransition = () => {
     setFormData((prev) => ({
@@ -118,32 +141,37 @@ export default function TuringMachineSpecComponent({
     }));
   };
 
+  // Helper function to build Turing machine spec from form data
+  const buildTuringMachineSpec = (): TuringMachineSpec => {
+    // Build the delta function from transitions
+    const delta: Record<string, Partial<Record<string, Transition>>> = {};
+
+    formData.transitions.forEach((transition) => {
+      if (!delta[transition.fromState]) {
+        delta[transition.fromState] = {};
+      }
+      delta[transition.fromState][transition.readSymbol] = {
+        nextState: transition.toState,
+        write: transition.writeSymbol,
+        move: transition.direction,
+      };
+    });
+
+    return {
+      Q: new Set(formData.states),
+      Sigma: new Set(formData.inputAlphabet),
+      Gamma: new Set(formData.tapeAlphabet),
+      delta,
+      q0: formData.startState,
+      qAccept: formData.acceptState,
+      qReject: formData.rejectState,
+      blank: formData.blankSymbol,
+    };
+  };
+
   const buildTuringMachine = () => {
     try {
-      // Build the delta function from transitions
-      const delta: Record<string, Partial<Record<string, Transition>>> = {};
-
-      formData.transitions.forEach((transition) => {
-        if (!delta[transition.fromState]) {
-          delta[transition.fromState] = {};
-        }
-        delta[transition.fromState][transition.readSymbol] = {
-          nextState: transition.toState,
-          write: transition.writeSymbol,
-          move: transition.direction,
-        };
-      });
-
-      const spec: TuringMachineSpec = {
-        Q: new Set(formData.states),
-        Sigma: new Set(formData.inputAlphabet),
-        Gamma: new Set(formData.tapeAlphabet),
-        delta,
-        q0: formData.startState,
-        qAccept: formData.acceptState,
-        qReject: formData.rejectState,
-        blank: formData.blankSymbol,
-      };
+      const spec = buildTuringMachineSpec();
 
       // Save the machine to localStorage
       saveTuringMachineSpec(spec);
@@ -152,6 +180,67 @@ export default function TuringMachineSpecComponent({
     } catch (error) {
       console.error(`Error creating Turing machine: ${error}`);
     }
+  };
+
+  const showDownloadOptions = () => {
+    setShowMetadataFields(true);
+  };
+
+  const performDownload = () => {
+    try {
+      const spec = buildTuringMachineSpec();
+
+      // Create a JSON-serializable version of the spec
+      const jsonSpec = {
+        Q: Array.from(spec.Q),
+        Sigma: Array.from(spec.Sigma),
+        Gamma: Array.from(spec.Gamma),
+        delta: spec.delta,
+        q0: spec.q0,
+        qAccept: spec.qAccept,
+        qReject: spec.qReject,
+        blank: spec.blank,
+        metadata: {
+          name: exportMetadata.name,
+          description: exportMetadata.description,
+          exportedAt: new Date().toISOString(),
+        },
+      };
+
+      // Sanitize filename by removing invalid characters and replacing spaces with hyphens
+      const sanitizedName = exportMetadata.name
+        .replace(/[^a-zA-Z0-9\s-_]/g, "") // Remove invalid characters
+        .replace(/\s+/g, "-") // Replace spaces with hyphens
+        .toLowerCase(); // Convert to lowercase
+
+      // Create filename with sanitized name and date
+      const filename = sanitizedName
+        ? `${sanitizedName}-${new Date().toISOString().split("T")[0]}.json`
+        : `turing-machine-${new Date().toISOString().split("T")[0]}.json`;
+
+      // Create and download the JSON file
+      const jsonString = JSON.stringify(jsonSpec, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(url);
+
+      // Hide metadata fields after download
+      setShowMetadataFields(false);
+    } catch (error) {
+      console.error(`Error downloading JSON: ${error}`);
+    }
+  };
+
+  const cancelDownload = () => {
+    setShowMetadataFields(false);
   };
 
   const loadExample = (exampleName: string) => {
@@ -661,12 +750,109 @@ export default function TuringMachineSpecComponent({
           </div>
         </div>
 
+        {/* Download Modal */}
+        {showMetadataFields && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onClick={cancelDownload}
+          >
+            <div
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Download Turing Machine
+                  </h3>
+                  <button
+                    onClick={cancelDownload}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Machine Name
+                    </label>
+                    <input
+                      type="text"
+                      value={exportMetadata.name}
+                      onChange={(e) =>
+                        setExportMetadata((prev) => ({
+                          ...prev,
+                          name: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      style={{
+                        backgroundColor: "var(--bg-primary)",
+                        color: "var(--text-primary)",
+                        borderColor: "var(--border-color)",
+                      }}
+                      placeholder="Enter machine name"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Description
+                    </label>
+                    <input
+                      type="text"
+                      value={exportMetadata.description}
+                      onChange={(e) =>
+                        setExportMetadata((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      style={{
+                        backgroundColor: "var(--bg-primary)",
+                        color: "var(--text-primary)",
+                        borderColor: "var(--border-color)",
+                      }}
+                      placeholder="Enter description"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    onClick={cancelDownload}
+                    className="px-4 py-2 text-gray-600 dark:text-gray-400 rounded-lg text-sm cursor-pointer border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={performDownload}
+                    className="px-4 py-2 text-white rounded-lg text-sm cursor-pointer bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 transition-colors"
+                  >
+                    📥 Download JSON
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-center gap-4">
           <button
             onClick={buildTuringMachine}
             className="px-6 py-3 text-white rounded-lg font-medium cursor-pointer bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
           >
             Build Turing Machine
+          </button>
+          <button
+            onClick={showDownloadOptions}
+            className="px-6 py-3 text-white rounded-lg font-medium cursor-pointer bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
+          >
+            📥 Download as JSON
           </button>
           <button
             onClick={clearSavedMachine}
