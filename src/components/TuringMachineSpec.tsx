@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   type TuringMachineSpec,
   type Direction,
@@ -7,7 +7,6 @@ import {
 import {
   saveTuringMachineSpec,
   getTuringMachineSpec,
-  clearTuringMachineSpec,
 } from "../lib/tm-local-storage";
 
 interface TuringMachineSpecProps {
@@ -41,8 +40,12 @@ export default function TuringMachineSpecComponent({
     description: "Exported from Turing Machine Builder",
   });
 
-  // Control visibility of metadata fields
-  const [showMetadataFields, setShowMetadataFields] = useState(false);
+  // Control visibility of modals
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+
+  // File input ref for loading JSON files
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Load saved machine on component mount
   useEffect(() => {
@@ -73,19 +76,24 @@ export default function TuringMachineSpecComponent({
     }
   }, []);
 
-  // Handle ESC key to close modal
+  // Handle ESC key to close modals
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && showMetadataFields) {
-        cancelDownload();
+      if (event.key === "Escape" && (showLoadModal || showSaveModal)) {
+        if (showLoadModal) {
+          setShowLoadModal(false);
+        }
+        if (showSaveModal) {
+          setShowSaveModal(false);
+        }
       }
     };
 
-    if (showMetadataFields) {
+    if (showLoadModal || showSaveModal) {
       document.addEventListener("keydown", handleEscKey);
       return () => document.removeEventListener("keydown", handleEscKey);
     }
-  }, [showMetadataFields]);
+  }, [showLoadModal, showSaveModal]);
 
   const addTransition = () => {
     setFormData((prev) => ({
@@ -113,21 +121,6 @@ export default function TuringMachineSpecComponent({
   const clearAllTransitions = () => {
     setFormData({
       ...formData,
-      transitions: [],
-    });
-  };
-
-  const clearSavedMachine = () => {
-    clearTuringMachineSpec();
-    // Reset form to default state
-    setFormData({
-      states: ["q0", "q1", "qAccept", "qReject"],
-      inputAlphabet: ["0", "1"],
-      tapeAlphabet: ["0", "1", "□"],
-      blankSymbol: "□",
-      startState: "q0",
-      acceptState: "qAccept",
-      rejectState: "qReject",
       transitions: [],
     });
   };
@@ -182,8 +175,12 @@ export default function TuringMachineSpecComponent({
     }
   };
 
-  const showDownloadOptions = () => {
-    setShowMetadataFields(true);
+  const openLoadModal = () => {
+    setShowLoadModal(true);
+  };
+
+  const openSaveModal = () => {
+    setShowSaveModal(true);
   };
 
   const performDownload = () => {
@@ -232,15 +229,99 @@ export default function TuringMachineSpecComponent({
 
       URL.revokeObjectURL(url);
 
-      // Hide metadata fields after download
-      setShowMetadataFields(false);
+      // Hide save modal after download
+      setShowSaveModal(false);
     } catch (error) {
       console.error(`Error downloading JSON: ${error}`);
     }
   };
 
-  const cancelDownload = () => {
-    setShowMetadataFields(false);
+  const cancelLoad = () => {
+    setShowLoadModal(false);
+  };
+
+  const cancelSave = () => {
+    setShowSaveModal(false);
+  };
+
+  const handleFileLoad = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const jsonContent = e.target?.result as string;
+        const loadedSpec = JSON.parse(jsonContent);
+
+        // Validate that it's a valid Turing machine spec
+        if (
+          !loadedSpec.Q ||
+          !loadedSpec.Sigma ||
+          !loadedSpec.Gamma ||
+          !loadedSpec.delta
+        ) {
+          alert("Invalid Turing machine specification file.");
+          return;
+        }
+
+        // Update form data with loaded specification
+        setFormData({
+          states: Array.isArray(loadedSpec.Q) ? loadedSpec.Q : [],
+          inputAlphabet: Array.isArray(loadedSpec.Sigma)
+            ? loadedSpec.Sigma
+            : [],
+          tapeAlphabet: Array.isArray(loadedSpec.Gamma) ? loadedSpec.Gamma : [],
+          blankSymbol: loadedSpec.blank || "□",
+          startState: loadedSpec.q0 || "",
+          acceptState: loadedSpec.qAccept || "",
+          rejectState: loadedSpec.qReject || "",
+          transitions: Object.entries(loadedSpec.delta || {}).flatMap(
+            ([fromState, stateTransitions]) =>
+              Object.entries(stateTransitions || {}).map(
+                ([readSymbol, transition]) => ({
+                  fromState,
+                  readSymbol,
+                  toState: transition?.nextState || "",
+                  writeSymbol: transition?.write || "",
+                  direction: transition?.move || "R",
+                })
+              )
+          ),
+        });
+
+        // Update metadata if available
+        if (loadedSpec.metadata) {
+          setExportMetadata({
+            name: loadedSpec.metadata.name || "Turing Machine Specification",
+            description:
+              loadedSpec.metadata.description ||
+              "Exported from Turing Machine Builder",
+          });
+        }
+
+        // Close the load modal
+        setShowLoadModal(false);
+
+        // Clear the file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+
+        alert("Turing machine specification loaded successfully!");
+      } catch (error) {
+        console.error("Error loading JSON file:", error);
+        alert(
+          "Error loading JSON file. Please make sure it's a valid Turing machine specification."
+        );
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
+  const triggerFileLoad = () => {
+    fileInputRef.current?.click();
   };
 
   const loadExample = (exampleName: string) => {
@@ -750,11 +831,11 @@ export default function TuringMachineSpecComponent({
           </div>
         </div>
 
-        {/* Download Modal */}
-        {showMetadataFields && (
+        {/* Load Modal */}
+        {showLoadModal && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-            onClick={cancelDownload}
+            onClick={cancelLoad}
           >
             <div
               className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-4"
@@ -763,10 +844,69 @@ export default function TuringMachineSpecComponent({
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    Download Turing Machine
+                    Load Turing Machine
                   </h3>
                   <button
-                    onClick={cancelDownload}
+                    onClick={cancelLoad}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="text-center py-8">
+                  <div className="text-6xl mb-4">📁</div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    Select a JSON file to load a previously saved Turing machine
+                    specification.
+                  </p>
+                  <button
+                    onClick={triggerFileLoad}
+                    className="px-6 py-3 text-white rounded-lg font-medium cursor-pointer bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
+                  >
+                    Choose JSON File
+                  </button>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    onClick={cancelLoad}
+                    className="px-4 py-2 text-gray-600 dark:text-gray-400 rounded-lg text-sm cursor-pointer border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileLoad}
+                  className="hidden"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Save Modal */}
+        {showSaveModal && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onClick={cancelSave}
+          >
+            <div
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Save Turing Machine
+                  </h3>
+                  <button
+                    onClick={cancelSave}
                     className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                   >
                     ✕
@@ -824,7 +964,7 @@ export default function TuringMachineSpecComponent({
 
                 <div className="flex justify-end gap-3 pt-4">
                   <button
-                    onClick={cancelDownload}
+                    onClick={cancelSave}
                     className="px-4 py-2 text-gray-600 dark:text-gray-400 rounded-lg text-sm cursor-pointer border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     Cancel
@@ -833,7 +973,7 @@ export default function TuringMachineSpecComponent({
                     onClick={performDownload}
                     className="px-4 py-2 text-white rounded-lg text-sm cursor-pointer bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 transition-colors"
                   >
-                    📥 Download JSON
+                    💾 Save JSON
                   </button>
                 </div>
               </div>
@@ -849,16 +989,16 @@ export default function TuringMachineSpecComponent({
             Build Turing Machine
           </button>
           <button
-            onClick={showDownloadOptions}
-            className="px-6 py-3 text-white rounded-lg font-medium cursor-pointer bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
+            onClick={openLoadModal}
+            className="px-6 py-3 text-white rounded-lg font-medium cursor-pointer bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
           >
-            📥 Download as JSON
+            📁 Load Machine
           </button>
           <button
-            onClick={clearSavedMachine}
-            className="px-6 py-3 text-white rounded-lg font-medium cursor-pointer bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+            onClick={openSaveModal}
+            className="px-6 py-3 text-white rounded-lg font-medium cursor-pointer bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
           >
-            Clear Saved Machine
+            💾 Save Machine
           </button>
         </div>
       </div>
