@@ -1,35 +1,32 @@
 @import "tailwindcss";
 
-:root {
-  --bg-primary: #f9fafb;
-  --bg-secondary: #ffffff;
-  --text-primary: #111827;
-  --text-secondary: #6b7280;
-  --border-color: #e5e7eb;
-  --accent-color: #4f46e5;
-  --accent-hover: #4338ca;
-  --tape-bg: #ffffff;
-  --tape-active: #fef3c7;
-  --tape-border: #f59e0b;
-}
-
-@media (prefers-color-scheme: dark) {
+/* Custom colors for dark mode */
+@layer base {
   :root {
-    --bg-primary: #111827;
-    --bg-secondary: #1f2937;
-    --text-primary: #f9fafb;
-    --text-secondary: #9ca3af;
-    --border-color: #374151;
-    --accent-color: #6366f1;
-    --accent-hover: #4f46e5;
-    --tape-bg: #1f2937;
-    --tape-active: #451a03;
-    --tape-border: #d97706;
+    --bg-primary: #f9fafb;
+    --bg-secondary: #ffffff;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+    --accent-color: #4f46e5;
+    --accent-hover: #4338ca;
+    --tape-bg: #ffffff;
+    --tape-active: #fef3c7;
+    --tape-border: #f59e0b;
   }
-}
 
-body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-primary: #111827;
+      --bg-secondary: #1f2937;
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --border-color: #374151;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --tape-bg: #1f2937;
+      --tape-active: #451a03;
+      --tape-border: #d97706;
+    }
+  }
 }

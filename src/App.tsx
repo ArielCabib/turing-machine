@@ -300,47 +300,28 @@ export default function App() {
 
   if (currentView === "spec") {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center p-4"
-        style={{ backgroundColor: "var(--bg-primary)" }}
-      >
-        <div
-          className="w-full max-w-4xl shadow-xl rounded-2xl p-8 space-y-6"
-          style={{ backgroundColor: "var(--bg-secondary)" }}
-        >
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
+        <div className="w-full max-w-4xl shadow-xl rounded-2xl p-8 space-y-6 bg-white dark:bg-gray-800">
           <div className="text-center space-y-4">
-            <h1
-              className="text-3xl font-bold"
-              style={{ color: "var(--accent-color)" }}
-            >
+            <h1 className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
               🧮 Turing Machine Builder
             </h1>
 
             {/* Example Presets */}
             <div className="space-y-2">
-              <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Try these examples:
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 <button
                   onClick={() => loadExample("binary-increment")}
-                  className="px-3 py-1 text-sm border rounded"
-                  style={{
-                    borderColor: "var(--border-color)",
-                    color: "var(--text-primary)",
-                    backgroundColor: "var(--bg-secondary)",
-                  }}
+                  className="px-3 py-1 text-sm border rounded cursor-pointer border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Binary Increment +1 (e.g., "101" → "110")
                 </button>
                 <button
                   onClick={() => loadExample("infinite-loop")}
-                  className="px-3 py-1 text-sm border rounded"
-                  style={{
-                    borderColor: "var(--border-color)",
-                    color: "var(--text-primary)",
-                    backgroundColor: "var(--bg-secondary)",
-                  }}
+                  className="px-3 py-1 text-sm border rounded cursor-pointer border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Infinite Loop (use Stop button!)
                 </button>
@@ -351,10 +332,7 @@ export default function App() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* States */}
             <div className="space-y-3">
-              <label
-                className="block text-sm font-medium"
-                style={{ color: "var(--text-primary)" }}
-              >
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">
                 States (Q)
               </label>
               <div className="flex flex-wrap gap-2">
@@ -368,12 +346,7 @@ export default function App() {
                         newStates[index] = e.target.value;
                         setFormData((prev) => ({ ...prev, states: newStates }));
                       }}
-                      className="px-3 py-1 border rounded text-sm"
-                      style={{
-                        backgroundColor: "var(--bg-secondary)",
-                        color: "var(--text-primary)",
-                        borderColor: "var(--border-color)",
-                      }}
+                      className="px-3 py-1 border rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                     />
                     <button
                       onClick={() => {
@@ -382,7 +355,7 @@ export default function App() {
                         );
                         setFormData((prev) => ({ ...prev, states: newStates }));
                       }}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 cursor-pointer"
                     >
                       ×
                     </button>
@@ -395,11 +368,7 @@ export default function App() {
                       states: [...prev.states, ""],
                     }))
                   }
-                  className="px-3 py-1 border border-dashed rounded text-sm"
-                  style={{
-                    borderColor: "var(--border-color)",
-                    color: "var(--text-secondary)",
-                  }}
+                  className="px-3 py-1 border border-dashed rounded text-sm cursor-pointer border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400"
                 >
                   + Add State
                 </button>
@@ -408,10 +377,7 @@ export default function App() {
 
             {/* Input Alphabet */}
             <div className="space-y-3">
-              <label
-                className="block text-sm font-medium"
-                style={{ color: "var(--text-primary)" }}
-              >
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">
                 Input Alphabet (Σ)
               </label>
               <div className="flex flex-wrap gap-2">
@@ -428,12 +394,7 @@ export default function App() {
                           inputAlphabet: newAlphabet,
                         }));
                       }}
-                      className="px-3 py-1 border rounded text-sm w-12 text-center"
-                      style={{
-                        backgroundColor: "var(--bg-secondary)",
-                        color: "var(--text-primary)",
-                        borderColor: "var(--border-color)",
-                      }}
+                      className="px-3 py-1 border rounded text-sm w-12 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                     />
                     <button
                       onClick={() => {
@@ -445,7 +406,7 @@ export default function App() {
                           inputAlphabet: newAlphabet,
                         }));
                       }}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 cursor-pointer"
                     >
                       ×
                     </button>
@@ -458,11 +419,7 @@ export default function App() {
                       inputAlphabet: [...prev.inputAlphabet, ""],
                     }))
                   }
-                  className="px-3 py-1 border border-dashed rounded text-sm"
-                  style={{
-                    borderColor: "var(--border-color)",
-                    color: "var(--text-secondary)",
-                  }}
+                  className="px-3 py-1 border border-dashed rounded text-sm cursor-pointer border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400"
                 >
                   + Add Symbol
                 </button>
@@ -471,10 +428,7 @@ export default function App() {
 
             {/* Tape Alphabet */}
             <div className="space-y-3">
-              <label
-                className="block text-sm font-medium"
-                style={{ color: "var(--text-primary)" }}
-              >
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">
                 Tape Alphabet (Γ)
               </label>
               <div className="flex flex-wrap gap-2">
@@ -491,12 +445,7 @@ export default function App() {
                           tapeAlphabet: newAlphabet,
                         }));
                       }}
-                      className="px-3 py-1 border rounded text-sm w-12 text-center"
-                      style={{
-                        backgroundColor: "var(--bg-secondary)",
-                        color: "var(--text-primary)",
-                        borderColor: "var(--border-color)",
-                      }}
+                      className="px-3 py-1 border rounded text-sm w-12 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                     />
                     <button
                       onClick={() => {
@@ -508,7 +457,7 @@ export default function App() {
                           tapeAlphabet: newAlphabet,
                         }));
                       }}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 cursor-pointer"
                     >
                       ×
                     </button>
@@ -521,11 +470,7 @@ export default function App() {
                       tapeAlphabet: [...prev.tapeAlphabet, ""],
                     }))
                   }
-                  className="px-3 py-1 border border-dashed rounded text-sm"
-                  style={{
-                    borderColor: "var(--border-color)",
-                    color: "var(--text-secondary)",
-                  }}
+                  className="px-3 py-1 border border-dashed rounded text-sm cursor-pointer border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400"
                 >
                   + Add Symbol
                 </button>
@@ -534,18 +479,12 @@ export default function App() {
 
             {/* Special States */}
             <div className="space-y-3">
-              <label
-                className="block text-sm font-medium"
-                style={{ color: "var(--text-primary)" }}
-              >
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">
                 Special States
               </label>
               <div className="space-y-2">
                 <div>
-                  <label
-                    className="block text-xs"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
+                  <label className="block text-xs text-gray-500 dark:text-gray-400">
                     Start State
                   </label>
                   <select
@@ -571,10 +510,7 @@ export default function App() {
                   </select>
                 </div>
                 <div>
-                  <label
-                    className="block text-xs"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
+                  <label className="block text-xs text-gray-500 dark:text-gray-400">
                     Accept State
                   </label>
                   <input
@@ -595,10 +531,7 @@ export default function App() {
                   />
                 </div>
                 <div>
-                  <label
-                    className="block text-xs"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
+                  <label className="block text-xs text-gray-500 dark:text-gray-400">
                     Reject State
                   </label>
                   <input
@@ -619,10 +552,7 @@ export default function App() {
                   />
                 </div>
                 <div>
-                  <label
-                    className="block text-xs"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
+                  <label className="block text-xs text-gray-500 dark:text-gray-400">
                     Blank Symbol
                   </label>
                   <input
@@ -649,24 +579,20 @@ export default function App() {
           {/* Transitions */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <label
-                className="block text-sm font-medium"
-                style={{ color: "var(--text-primary)" }}
-              >
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">
                 Transitions (δ)
               </label>
               <div className="flex gap-2">
                 <button
                   onClick={addTransition}
-                  className="px-4 py-2 text-white rounded-lg text-sm"
-                  style={{ backgroundColor: "var(--accent-color)" }}
+                  className="px-4 py-2 text-white rounded-lg text-sm cursor-pointer bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
                 >
                   + Add Transition
                 </button>
                 {formData.transitions.length > 0 && (
                   <button
                     onClick={clearAllTransitions}
-                    className="px-4 py-2 text-white rounded-lg text-sm"
+                    className="px-4 py-2 text-white rounded-lg text-sm cursor-pointer"
                     style={{ backgroundColor: "#ef4444" }}
                     onMouseEnter={(e) =>
                       ((e.target as HTMLButtonElement).style.backgroundColor =
@@ -709,7 +635,7 @@ export default function App() {
                     ))}
                   </select>
 
-                  <span style={{ color: "var(--text-secondary)" }}>×</span>
+                  <span className="text-gray-500">×</span>
 
                   <select
                     value={transition.readSymbol}
@@ -730,7 +656,7 @@ export default function App() {
                     ))}
                   </select>
 
-                  <span style={{ color: "var(--text-secondary)" }}>→</span>
+                  <span className="text-gray-500">→</span>
 
                   <select
                     value={transition.toState}
@@ -789,7 +715,7 @@ export default function App() {
 
                   <button
                     onClick={() => removeTransition(index)}
-                    className="text-red-500 hover:text-red-700 px-2"
+                    className="text-red-500 hover:text-red-700 px-2 cursor-pointer"
                   >
                     ×
                   </button>
@@ -801,8 +727,10 @@ export default function App() {
           <div className="flex justify-center gap-4">
             <button
               onClick={buildTuringMachine}
-              className="px-6 py-3 text-white rounded-lg font-medium"
-              style={{ backgroundColor: "var(--accent-color)" }}
+              className="px-6 py-3 text-white rounded-lg font-medium cursor-pointer"
+              style={{
+                backgroundColor: "var(--accent-color)",
+              }}
             >
               Build Turing Machine
             </button>
@@ -813,25 +741,18 @@ export default function App() {
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{ backgroundColor: "var(--bg-primary)" }}
-    >
-      <div
-        className="w-full max-w-3xl shadow-xl rounded-2xl p-8 space-y-6"
-        style={{ backgroundColor: "var(--bg-secondary)" }}
-      >
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="w-full max-w-3xl shadow-xl rounded-2xl p-8 space-y-6 bg-white dark:bg-gray-800">
         <div className="flex justify-between items-center">
-          <h1
-            className="text-3xl font-bold"
-            style={{ color: "var(--accent-color)" }}
-          >
+          <h1 className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
             🧮 Turing Machine Simulator
           </h1>
           <button
             onClick={() => setCurrentView("spec")}
-            className="px-4 py-2 text-white rounded-lg text-sm"
-            style={{ backgroundColor: "var(--accent-color)" }}
+            className="px-4 py-2 text-white rounded-lg text-sm cursor-pointer"
+            style={{
+              backgroundColor: "var(--accent-color)",
+            }}
           >
             Edit Machine
           </button>
@@ -885,8 +806,12 @@ export default function App() {
         {/* Controls */}
         <div className="flex justify-center gap-3">
           <button
-            className="px-4 py-2 text-white rounded-lg"
-            style={{ backgroundColor: "#10b981" } as React.CSSProperties}
+            className="px-4 py-2 text-white rounded-lg cursor-pointer"
+            style={
+              {
+                backgroundColor: "#10b981",
+              } as React.CSSProperties
+            }
             onClick={stepSimulation}
             disabled={!runtime || isRunning}
             onMouseEnter={(e) =>
@@ -901,8 +826,12 @@ export default function App() {
             Step
           </button>
           <button
-            className="px-4 py-2 text-white rounded-lg"
-            style={{ backgroundColor: "#3b82f6" } as React.CSSProperties}
+            className="px-4 py-2 text-white rounded-lg cursor-pointer"
+            style={
+              {
+                backgroundColor: "#3b82f6",
+              } as React.CSSProperties
+            }
             onClick={runSimulation}
             disabled={!runtime || isRunning}
             onMouseEnter={(e) =>
@@ -918,8 +847,12 @@ export default function App() {
           </button>
           {isRunning && (
             <button
-              className="px-4 py-2 text-white rounded-lg"
-              style={{ backgroundColor: "#ef4444" } as React.CSSProperties}
+              className="px-4 py-2 text-white rounded-lg cursor-pointer"
+              style={
+                {
+                  backgroundColor: "#ef4444",
+                } as React.CSSProperties
+              }
               onClick={stopSimulation}
               onMouseEnter={(e) =>
                 ((e.target as HTMLButtonElement).style.backgroundColor =
