@@ -23,6 +23,14 @@ export default function PromotionSection() {
           >
             💡 Suggest Feature
           </a>
+          <a
+            href="https://github.com/ArielCabib/turing-machine"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+          >
+            🔧 Contribute on GitHub
+          </a>
         </div>
       </div>
     </div>
