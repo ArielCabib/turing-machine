@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   createRuntime,
   step,
@@ -17,6 +17,229 @@ export default function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [runTimeout, setRunTimeout] = useState<number | null>(null);
   const [randomInputs, setRandomInputs] = useState<string[]>([]);
+  const isLoadingRef = useRef(false);
+
+  // Form state for TM specification
+  const [formData, setFormData] = useState({
+    states: ["q0", "q1", "qAccept", "qReject"],
+    inputAlphabet: ["0", "1"],
+    tapeAlphabet: ["0", "1", "□"],
+    blankSymbol: "□",
+    startState: "q0",
+    acceptState: "qAccept",
+    rejectState: "qReject",
+    transitions: [] as Array<{
+      fromState: string;
+      readSymbol: string;
+      toState: string;
+      writeSymbol: string;
+      direction: Direction;
+    }>,
+  });
+
+  // localStorage key for saving state
+  const STORAGE_KEY = "turing-machine-state";
+
+  // Save state to localStorage
+  const saveState = useCallback(() => {
+    if (isLoadingRef.current) {
+      console.log("Skipping save - currently loading state");
+      return;
+    }
+
+    console.log(
+      "saveState called with formData transitions:",
+      formData.transitions.length
+    );
+    const state = {
+      currentView,
+      tmSpec,
+      input,
+      formData,
+      randomInputs,
+      statusMessage,
+      isRunning,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      console.log("State saved to localStorage");
+    } catch (error) {
+      console.warn("Failed to save state to localStorage:", error);
+    }
+  }, [
+    currentView,
+    tmSpec,
+    input,
+    formData,
+    randomInputs,
+    statusMessage,
+    isRunning,
+  ]);
+
+  // Load state from localStorage
+  const loadState = useCallback(() => {
+    if (isLoadingRef.current) {
+      console.log("Already loading state, skipping");
+      return;
+    }
+
+    try {
+      isLoadingRef.current = true;
+      const savedState = localStorage.getItem(STORAGE_KEY);
+      if (savedState) {
+        console.log("Loading state from localStorage");
+        const state = JSON.parse(savedState);
+
+        // Validate and restore state
+        if (state.currentView) setCurrentView(state.currentView);
+        if (state.tmSpec) setTmSpec(state.tmSpec);
+        if (state.input) setInput(state.input);
+        if (state.formData) {
+          console.log("Restoring formData:", state.formData);
+          console.log("Transitions in formData:", state.formData.transitions);
+          setFormData(state.formData);
+        }
+        if (state.randomInputs) setRandomInputs(state.randomInputs);
+        if (state.statusMessage) setStatusMessage(state.statusMessage);
+
+        // Restore runtime if we have a valid spec and input
+        if (state.tmSpec && state.input) {
+          try {
+            // Reconstruct the spec with proper Set objects
+            // Handle both array and object serialization formats
+            const reconstructSet = (data: unknown): Set<string> => {
+              if (Array.isArray(data)) {
+                return new Set(data);
+              } else if (data && typeof data === "object") {
+                // If it's an object, extract the values
+                return new Set(Object.values(data));
+              }
+              return new Set();
+            };
+
+            const reconstructedSpec: TuringMachineSpec = {
+              Q: reconstructSet(state.tmSpec.Q),
+              Sigma: reconstructSet(state.tmSpec.Sigma),
+              Gamma: reconstructSet(state.tmSpec.Gamma),
+              delta: state.tmSpec.delta,
+              q0: state.tmSpec.q0,
+              qAccept: state.tmSpec.qAccept,
+              qReject: state.tmSpec.qReject,
+              blank: state.tmSpec.blank,
+            };
+
+            // Debug logging
+            console.log("Original Sigma from state:", state.tmSpec.Sigma);
+            console.log(
+              "Reconstructed Sigma:",
+              Array.from(reconstructedSpec.Sigma)
+            );
+            console.log("Original delta from state:", state.tmSpec.delta);
+            console.log("Reconstructed delta:", reconstructedSpec.delta);
+            console.log("Input to validate:", state.input);
+
+            // Validate that the input is compatible with the reconstructed alphabet
+            let inputAlphabet = Array.from(reconstructedSpec.Sigma);
+
+            // Fallback: if reconstructed alphabet is empty, try multiple sources
+            if (inputAlphabet.length === 0) {
+              // Try formData first
+              if (state.formData && state.formData.inputAlphabet) {
+                inputAlphabet = state.formData.inputAlphabet.filter(
+                  (symbol: string) => symbol.trim() !== ""
+                );
+                console.log(
+                  "Using fallback alphabet from formData:",
+                  inputAlphabet
+                );
+              }
+
+              // If formData alphabet is still incomplete, try tape alphabet
+              if (
+                inputAlphabet.length === 0 ||
+                !state.input
+                  .split("")
+                  .every((char: string) => inputAlphabet.includes(char))
+              ) {
+                const tapeAlphabet = Array.from(reconstructedSpec.Gamma);
+                if (
+                  tapeAlphabet.length > 0 &&
+                  state.input
+                    .split("")
+                    .every((char: string) => tapeAlphabet.includes(char))
+                ) {
+                  inputAlphabet = tapeAlphabet;
+                  console.log(
+                    "Using tape alphabet as input alphabet:",
+                    inputAlphabet
+                  );
+                } else {
+                  // Last resort: extract from input
+                  const inputChars = state.input.split("");
+                  const uniqueChars = [...new Set(inputChars)] as string[];
+                  inputAlphabet = uniqueChars;
+                  console.log(
+                    "Using alphabet extracted from input:",
+                    inputAlphabet
+                  );
+                }
+              }
+
+              // Update the reconstructed spec with the fallback alphabet
+              reconstructedSpec.Sigma = new Set(inputAlphabet);
+            }
+
+            const inputChars = state.input.split("");
+            const invalidChars = inputChars.filter(
+              (char: string) => !inputAlphabet.includes(char)
+            );
+
+            if (invalidChars.length > 0) {
+              console.warn(
+                `Input contains characters not in alphabet: ${invalidChars.join(
+                  ", "
+                )}`
+              );
+              setStatusMessage(
+                `State restored, but input "${state.input}" contains invalid characters. Please rebuild the machine or change the input.`
+              );
+              return;
+            }
+
+            const rt = createRuntime(reconstructedSpec, state.input);
+            setRuntime(rt);
+          } catch (error) {
+            console.warn("Failed to restore runtime:", error);
+            setStatusMessage(
+              "State restored, but runtime could not be recreated. Please rebuild the machine."
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.warn("Failed to load state from localStorage:", error);
+    } finally {
+      isLoadingRef.current = false;
+    }
+  }, []);
+
+  // Load state on component mount
+  useEffect(() => {
+    loadState();
+    // Set a flag to prevent immediate saving after load
+    setTimeout(() => {
+      setHasLoaded(true);
+    }, 100);
+  }, [loadState]);
+
+  // Save state whenever important data changes (but not on initial load)
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    if (hasLoaded) {
+      saveState();
+    }
+  }, [saveState, hasLoaded]);
 
   // Stop any running simulation
   const stopSimulation = () => {
@@ -48,24 +271,6 @@ export default function App() {
     }
   };
 
-  // Form state for TM specification
-  const [formData, setFormData] = useState({
-    states: ["q0", "q1", "qAccept", "qReject"],
-    inputAlphabet: ["0", "1"],
-    tapeAlphabet: ["0", "1", "□"],
-    blankSymbol: "□",
-    startState: "q0",
-    acceptState: "qAccept",
-    rejectState: "qReject",
-    transitions: [] as Array<{
-      fromState: string;
-      readSymbol: string;
-      toState: string;
-      writeSymbol: string;
-      direction: Direction;
-    }>,
-  });
-
   const addTransition = () => {
     setFormData((prev) => ({
       ...prev,
@@ -90,10 +295,31 @@ export default function App() {
   };
 
   const clearAllTransitions = () => {
-    setFormData((prev) => ({
-      ...prev,
+    // Clear all form data completely
+    setFormData({
+      states: [],
+      inputAlphabet: [],
+      tapeAlphabet: [],
+      blankSymbol: "",
+      startState: "",
+      acceptState: "",
+      rejectState: "",
       transitions: [],
-    }));
+    });
+
+    // Also clear other related state
+    setTmSpec(null);
+    setRuntime(null);
+    setInput("");
+    setStatusMessage("All data cleared. Start fresh!");
+    setIsRunning(false);
+    setRandomInputs([]);
+
+    // Clear any running timeout
+    if (runTimeout) {
+      clearTimeout(runTimeout);
+      setRunTimeout(null);
+    }
   };
 
   const updateTransition = (index: number, field: string, value: string) => {
@@ -243,6 +469,12 @@ export default function App() {
   };
 
   const loadExample = (exampleName: string) => {
+    console.log("Loading example:", exampleName);
+    console.log("hasLoaded flag:", hasLoaded);
+    console.log(
+      "Current formData transitions before load:",
+      formData.transitions.length
+    );
     switch (exampleName) {
       case "binary-increment":
         setFormData({
@@ -329,6 +561,16 @@ export default function App() {
           ],
         });
         break;
+    }
+
+    // Manually trigger save after loading example (only if not during restoration)
+    if (hasLoaded) {
+      setTimeout(() => {
+        console.log("Manually saving after example load");
+        saveState();
+      }, 50);
+    } else {
+      console.log("Skipping manual save - still loading state");
     }
   };
 
@@ -626,18 +868,9 @@ export default function App() {
                 {formData.transitions.length > 0 && (
                   <button
                     onClick={clearAllTransitions}
-                    className="px-4 py-2 text-white rounded-lg text-sm cursor-pointer"
-                    style={{ backgroundColor: "#ef4444" }}
-                    onMouseEnter={(e) =>
-                      ((e.target as HTMLButtonElement).style.backgroundColor =
-                        "#dc2626")
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.target as HTMLButtonElement).style.backgroundColor =
-                        "#ef4444")
-                    }
+                    className="px-4 py-2 text-white rounded-lg text-sm cursor-pointer bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
                   >
-                    Clear All
+                    Clear All Data
                   </button>
                 )}
               </div>
@@ -799,10 +1032,7 @@ export default function App() {
           </h1>
           <button
             onClick={() => setCurrentView("spec")}
-            className="px-4 py-2 text-white rounded-lg text-sm cursor-pointer"
-            style={{
-              backgroundColor: "var(--accent-color)",
-            }}
+            className="px-4 py-2 text-white rounded-lg text-sm cursor-pointer bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
           >
             Edit Machine
           </button>
