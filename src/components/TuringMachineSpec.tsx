@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   type TuringMachineSpec,
   type Direction,
   type Transition,
 } from "../lib/tm";
+import {
+  saveTuringMachineSpec,
+  getTuringMachineSpec,
+  clearTuringMachineSpec,
+} from "../lib/tm-local-storage";
 
 interface TuringMachineSpecProps {
   onBuildMachine: (spec: TuringMachineSpec) => void;
@@ -30,6 +35,35 @@ export default function TuringMachineSpecComponent({
     }>,
   });
 
+  // Load saved machine on component mount
+  useEffect(() => {
+    const savedSpec = getTuringMachineSpec();
+    if (savedSpec) {
+      // Convert saved spec back to form data
+      setFormData({
+        states: Array.from(savedSpec.Q),
+        inputAlphabet: Array.from(savedSpec.Sigma),
+        tapeAlphabet: Array.from(savedSpec.Gamma),
+        blankSymbol: savedSpec.blank,
+        startState: savedSpec.q0,
+        acceptState: savedSpec.qAccept,
+        rejectState: savedSpec.qReject,
+        transitions: Object.entries(savedSpec.delta).flatMap(
+          ([fromState, stateTransitions]) =>
+            Object.entries(stateTransitions || {}).map(
+              ([readSymbol, transition]) => ({
+                fromState,
+                readSymbol,
+                toState: transition?.nextState || "",
+                writeSymbol: transition?.write || "",
+                direction: transition?.move || "R",
+              })
+            )
+        ),
+      });
+    }
+  }, []);
+
   const addTransition = () => {
     setFormData((prev) => ({
       ...prev,
@@ -54,15 +88,23 @@ export default function TuringMachineSpecComponent({
   };
 
   const clearAllTransitions = () => {
-    // Clear all form data completely
     setFormData({
-      states: [],
-      inputAlphabet: [],
-      tapeAlphabet: [],
-      blankSymbol: "",
-      startState: "",
-      acceptState: "",
-      rejectState: "",
+      ...formData,
+      transitions: [],
+    });
+  };
+
+  const clearSavedMachine = () => {
+    clearTuringMachineSpec();
+    // Reset form to default state
+    setFormData({
+      states: ["q0", "q1", "qAccept", "qReject"],
+      inputAlphabet: ["0", "1"],
+      tapeAlphabet: ["0", "1", "□"],
+      blankSymbol: "□",
+      startState: "q0",
+      acceptState: "qAccept",
+      rejectState: "qReject",
       transitions: [],
     });
   };
@@ -102,6 +144,9 @@ export default function TuringMachineSpecComponent({
         qReject: formData.rejectState,
         blank: formData.blankSymbol,
       };
+
+      // Save the machine to localStorage
+      saveTuringMachineSpec(spec);
 
       onBuildMachine(spec);
     } catch (error) {
@@ -495,7 +540,7 @@ export default function TuringMachineSpecComponent({
                   onClick={clearAllTransitions}
                   className="px-4 py-2 text-white rounded-lg text-sm cursor-pointer bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
                 >
-                  Clear All Data
+                  Clear All Transitions
                 </button>
               )}
             </div>
@@ -622,6 +667,12 @@ export default function TuringMachineSpecComponent({
             className="px-6 py-3 text-white rounded-lg font-medium cursor-pointer bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
           >
             Build Turing Machine
+          </button>
+          <button
+            onClick={clearSavedMachine}
+            className="px-6 py-3 text-white rounded-lg font-medium cursor-pointer bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+          >
+            Clear Saved Machine
           </button>
         </div>
       </div>
