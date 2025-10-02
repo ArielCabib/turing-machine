@@ -32,6 +32,19 @@ export interface TMRuntime {
 }
 
 export function createRuntime(spec: TuringMachineSpec, input: string): TMRuntime {
+  // Validate that all input characters are in Sigma
+  const inputChars = input.split('');
+  for (const char of inputChars) {
+    if (!spec.Sigma.has(char)) {
+      throw new Error(`Input character '${char}' is not in the input alphabet Sigma`);
+    }
+  }
+
+  // Validate that blank is not in Sigma
+  if (spec.Sigma.has(spec.blank)) {
+    throw new Error(`Blank symbol '${spec.blank}' should not be in the input alphabet Sigma`);
+  }
+
   const tape = input.length ? input.split('') : [spec.blank];
   return { spec, tape, head: 0, state: spec.q0, steps: 0 };
 }
