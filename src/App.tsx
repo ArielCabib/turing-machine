@@ -16,6 +16,7 @@ export default function App() {
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [isRunning, setIsRunning] = useState(false);
   const [runTimeout, setRunTimeout] = useState<number | null>(null);
+  const [randomInputs, setRandomInputs] = useState<string[]>([]);
 
   // Stop any running simulation
   const stopSimulation = () => {
@@ -134,12 +135,45 @@ export default function App() {
       setTmSpec(spec);
       setCurrentView("simulator");
 
-      // Auto-start the simulation
+      // Auto-start the simulation with a random input
       setTimeout(() => {
         try {
-          const rt = createRuntime(spec, input);
-          setRuntime(rt);
-          setStatusMessage("Simulation ready. Use Step or Run to execute.");
+          // Generate random inputs first
+          const inputs: string[] = [];
+          const alphabet = formData.inputAlphabet.filter(
+            (symbol) => symbol.trim() !== ""
+          );
+
+          if (alphabet.length > 0) {
+            // Generate up to 10 random inputs with lengths from 1 to 10
+            for (let i = 0; i < 10; i++) {
+              const length = Math.floor(Math.random() * 10) + 1; // 1 to 10 characters
+              let randomInput = "";
+
+              for (let j = 0; j < length; j++) {
+                const randomIndex = Math.floor(Math.random() * alphabet.length);
+                randomInput += alphabet[randomIndex];
+              }
+
+              inputs.push(randomInput);
+            }
+
+            setRandomInputs(inputs);
+
+            // Use the first random input as the current input
+            const selectedInput = inputs[0];
+            setInput(selectedInput);
+
+            const rt = createRuntime(spec, selectedInput);
+            setRuntime(rt);
+            setStatusMessage(
+              `Simulation ready with random input: "${selectedInput}". Use Step or Run to execute.`
+            );
+          } else {
+            const rt = createRuntime(spec, input);
+            setRuntime(rt);
+            setStatusMessage("Simulation ready. Use Step or Run to execute.");
+          }
         } catch (error) {
           setStatusMessage(`Error starting simulation: ${error}`);
         }
@@ -727,14 +761,30 @@ export default function App() {
           <div className="flex justify-center gap-4">
             <button
               onClick={buildTuringMachine}
-              className="px-6 py-3 text-white rounded-lg font-medium cursor-pointer"
-              style={{
-                backgroundColor: "var(--accent-color)",
-              }}
+              className="px-6 py-3 text-white rounded-lg font-medium cursor-pointer bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
             >
               Build Turing Machine
             </button>
           </div>
+
+          {/* Show generated random inputs in spec view */}
+          {randomInputs.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 text-center">
+                Auto-generated test inputs:
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {randomInputs.map((testInput, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 text-sm border rounded border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700"
+                  >
+                    {testInput}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -759,21 +809,36 @@ export default function App() {
         </div>
 
         {/* Input */}
-        <div className="flex justify-center">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => handleInputChange(e.target.value)}
-            className="px-4 py-2 border rounded-lg w-64 text-center focus:outline-none"
-            placeholder="Enter binary input (e.g., 101)"
-            style={
-              {
-                backgroundColor: "var(--bg-secondary)",
-                color: "var(--text-primary)",
-                borderColor: "var(--border-color)",
-              } as React.CSSProperties
-            }
-          />
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex justify-center">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => handleInputChange(e.target.value)}
+              className="px-4 py-2 border rounded-lg w-64 text-center focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+              placeholder="Enter input (e.g., 101)"
+            />
+          </div>
+
+          {/* Random Test Inputs */}
+          {randomInputs.length > 0 && (
+            <div className="w-full max-w-2xl">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 text-center">
+                Test inputs (click to use):
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {randomInputs.map((testInput, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleInputChange(testInput)}
+                    className="px-3 py-1 text-sm border rounded cursor-pointer border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                  >
+                    {testInput}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tape */}
