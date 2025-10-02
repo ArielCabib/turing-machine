@@ -14,6 +14,38 @@ export default function App() {
   const [runtime, setRuntime] = useState<TMRuntime | null>(null);
   const [input, setInput] = useState("101");
   const [statusMessage, setStatusMessage] = useState<string>("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [runTimeout, setRunTimeout] = useState<number | null>(null);
+
+  // Stop any running simulation
+  const stopSimulation = () => {
+    if (runTimeout) {
+      clearTimeout(runTimeout);
+      setRunTimeout(null);
+    }
+    if (isRunning) {
+      setIsRunning(false);
+      setStatusMessage("Simulation stopped.");
+    }
+  };
+
+  // Auto-restart simulation when input changes
+  const handleInputChange = (newInput: string) => {
+    setInput(newInput);
+
+    // Stop any running simulation first
+    stopSimulation();
+
+    if (tmSpec && newInput) {
+      try {
+        const rt = createRuntime(tmSpec, newInput);
+        setRuntime(rt);
+        setStatusMessage("Input changed. Simulation restarted.");
+      } catch (error) {
+        setStatusMessage(`Error with new input: ${error}`);
+      }
+    }
+  };
 
   // Form state for TM specification
   const [formData, setFormData] = useState({
@@ -56,6 +88,13 @@ export default function App() {
     }));
   };
 
+  const clearAllTransitions = () => {
+    setFormData((prev) => ({
+      ...prev,
+      transitions: [],
+    }));
+  };
+
   const updateTransition = (index: number, field: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -94,20 +133,19 @@ export default function App() {
 
       setTmSpec(spec);
       setCurrentView("simulator");
-    } catch (error) {
-      alert(`Error creating Turing machine: ${error}`);
-    }
-  };
 
-  const startSimulation = () => {
-    if (!tmSpec) return;
-
-    try {
-      const rt = createRuntime(tmSpec, input);
-      setRuntime(rt);
-      setStatusMessage("Simulation started. Use Step or Run to execute.");
+      // Auto-start the simulation
+      setTimeout(() => {
+        try {
+          const rt = createRuntime(spec, input);
+          setRuntime(rt);
+          setStatusMessage("Simulation ready. Use Step or Run to execute.");
+        } catch (error) {
+          setStatusMessage(`Error starting simulation: ${error}`);
+        }
+      }, 100);
     } catch (error) {
-      setStatusMessage(`Error starting simulation: ${error}`);
+      setStatusMessage(`Error creating Turing machine: ${error}`);
     }
   };
 
@@ -130,14 +168,14 @@ export default function App() {
     }
   };
 
-  const resetSimulation = () => {
-    if (!tmSpec) return;
-    setStatusMessage("");
-    startSimulation();
-  };
-
   const runSimulation = () => {
     if (!runtime) return;
+
+    // Stop any existing run
+    stopSimulation();
+
+    setIsRunning(true);
+    setStatusMessage("Running simulation...");
 
     const runStep = () => {
       if (!runtime) return;
@@ -147,8 +185,12 @@ export default function App() {
 
       if (canContinue) {
         // Continue running after a short delay
-        setTimeout(runStep, 500);
+        const timeout = setTimeout(runStep, 500);
+        setRunTimeout(timeout);
       } else {
+        setIsRunning(false);
+        setRunTimeout(null);
+
         if (runtime.state === runtime.spec.qAccept) {
           setStatusMessage(
             `✅ Machine accepted! Final state: ${runtime.state}`
@@ -226,6 +268,33 @@ export default function App() {
           ],
         });
         break;
+      case "infinite-loop":
+        setFormData({
+          states: ["q0", "qAccept", "qReject"],
+          inputAlphabet: ["0"],
+          tapeAlphabet: ["0", "□"],
+          blankSymbol: "□",
+          startState: "q0",
+          acceptState: "qAccept",
+          rejectState: "qReject",
+          transitions: [
+            {
+              fromState: "q0",
+              readSymbol: "0",
+              toState: "q0",
+              writeSymbol: "0",
+              direction: "R",
+            },
+            {
+              fromState: "q0",
+              readSymbol: "□",
+              toState: "q0",
+              writeSymbol: "□",
+              direction: "L",
+            },
+          ],
+        });
+        break;
     }
   };
 
@@ -250,7 +319,7 @@ export default function App() {
             {/* Example Presets */}
             <div className="space-y-2">
               <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                Try this example:
+                Try these examples:
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 <button
@@ -263,6 +332,17 @@ export default function App() {
                   }}
                 >
                   Binary Increment +1 (e.g., "101" → "110")
+                </button>
+                <button
+                  onClick={() => loadExample("infinite-loop")}
+                  className="px-3 py-1 text-sm border rounded"
+                  style={{
+                    borderColor: "var(--border-color)",
+                    color: "var(--text-primary)",
+                    backgroundColor: "var(--bg-secondary)",
+                  }}
+                >
+                  Infinite Loop (use Stop button!)
                 </button>
               </div>
             </div>
@@ -575,13 +655,32 @@ export default function App() {
               >
                 Transitions (δ)
               </label>
-              <button
-                onClick={addTransition}
-                className="px-4 py-2 text-white rounded-lg text-sm"
-                style={{ backgroundColor: "var(--accent-color)" }}
-              >
-                + Add Transition
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={addTransition}
+                  className="px-4 py-2 text-white rounded-lg text-sm"
+                  style={{ backgroundColor: "var(--accent-color)" }}
+                >
+                  + Add Transition
+                </button>
+                {formData.transitions.length > 0 && (
+                  <button
+                    onClick={clearAllTransitions}
+                    className="px-4 py-2 text-white rounded-lg text-sm"
+                    style={{ backgroundColor: "#ef4444" }}
+                    onMouseEnter={(e) =>
+                      ((e.target as HTMLButtonElement).style.backgroundColor =
+                        "#dc2626")
+                    }
+                    onMouseLeave={(e) =>
+                      ((e.target as HTMLButtonElement).style.backgroundColor =
+                        "#ef4444")
+                    }
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -739,12 +838,13 @@ export default function App() {
         </div>
 
         {/* Input */}
-        <div className="flex justify-center gap-3">
+        <div className="flex justify-center">
           <input
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => handleInputChange(e.target.value)}
             className="px-4 py-2 border rounded-lg w-64 text-center focus:outline-none"
+            placeholder="Enter binary input (e.g., 101)"
             style={
               {
                 backgroundColor: "var(--bg-secondary)",
@@ -753,25 +853,6 @@ export default function App() {
               } as React.CSSProperties
             }
           />
-          <button
-            className="px-4 py-2 text-white rounded-lg"
-            style={
-              {
-                backgroundColor: "var(--accent-color)",
-              } as React.CSSProperties
-            }
-            onClick={startSimulation}
-            onMouseEnter={(e) =>
-              ((e.target as HTMLButtonElement).style.backgroundColor =
-                "var(--accent-hover)")
-            }
-            onMouseLeave={(e) =>
-              ((e.target as HTMLButtonElement).style.backgroundColor =
-                "var(--accent-color)")
-            }
-          >
-            Start
-          </button>
         </div>
 
         {/* Tape */}
@@ -807,7 +888,7 @@ export default function App() {
             className="px-4 py-2 text-white rounded-lg"
             style={{ backgroundColor: "#10b981" } as React.CSSProperties}
             onClick={stepSimulation}
-            disabled={!runtime}
+            disabled={!runtime || isRunning}
             onMouseEnter={(e) =>
               ((e.target as HTMLButtonElement).style.backgroundColor =
                 "#059669")
@@ -823,7 +904,7 @@ export default function App() {
             className="px-4 py-2 text-white rounded-lg"
             style={{ backgroundColor: "#3b82f6" } as React.CSSProperties}
             onClick={runSimulation}
-            disabled={!runtime}
+            disabled={!runtime || isRunning}
             onMouseEnter={(e) =>
               ((e.target as HTMLButtonElement).style.backgroundColor =
                 "#2563eb")
@@ -835,21 +916,23 @@ export default function App() {
           >
             Run
           </button>
-          <button
-            className="px-4 py-2 text-white rounded-lg"
-            style={{ backgroundColor: "#ef4444" } as React.CSSProperties}
-            onClick={resetSimulation}
-            onMouseEnter={(e) =>
-              ((e.target as HTMLButtonElement).style.backgroundColor =
-                "#dc2626")
-            }
-            onMouseLeave={(e) =>
-              ((e.target as HTMLButtonElement).style.backgroundColor =
-                "#ef4444")
-            }
-          >
-            Reset
-          </button>
+          {isRunning && (
+            <button
+              className="px-4 py-2 text-white rounded-lg"
+              style={{ backgroundColor: "#ef4444" } as React.CSSProperties}
+              onClick={stopSimulation}
+              onMouseEnter={(e) =>
+                ((e.target as HTMLButtonElement).style.backgroundColor =
+                  "#dc2626")
+              }
+              onMouseLeave={(e) =>
+                ((e.target as HTMLButtonElement).style.backgroundColor =
+                  "#ef4444")
+              }
+            >
+              Stop
+            </button>
+          )}
         </div>
 
         {/* State info */}
