@@ -6,6 +6,7 @@ import {
   type TMRuntime,
 } from "./lib/tm";
 import TuringMachineSpecComponent from "./components/TuringMachineSpec";
+import PromotionSection from "./components/PromotionSection";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<"spec" | "simulator">("spec");
@@ -335,6 +336,8 @@ export default function App() {
             {statusMessage}
           </div>
         )}
+
+        <PromotionSection />
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import {
   saveTuringMachineSpec,
   getTuringMachineSpec,
 } from "../lib/tm-local-storage";
+import PromotionSection from "./PromotionSection";
 
 interface TuringMachineSpecProps {
   onBuildMachine: (spec: TuringMachineSpec) => void;
@@ -1143,6 +1144,8 @@ export default function TuringMachineSpecComponent({
             💾 Save Machine
           </button>
         </div>
+
+        <PromotionSection />
 
         {/* Toast Notification */}
         {toast.show && (
